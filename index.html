@@ -335,17 +335,19 @@ function expandRio(ate){
     const yAbs=rio.length*PASSO;
     if(yAbs>=rioGen.proxMuda){
       const r=Math.random();
-      if(r<0.25){rioGen.largAlvo=W*0.36;rioGen.amp=W*0.20;rioGen.per=280+Math.random()*180;}      // estreito, curva brusca
-      else if(r<0.48){rioGen.largAlvo=W*0.68;rioGen.amp=W*0.07;rioGen.per=800+Math.random()*400;} // largo calmo
-      else if(r<0.68){rioGen.largAlvo=W*0.48;rioGen.amp=W*0.22;rioGen.per=320+Math.random()*200;} // médio, muito sinuoso
-      else if(r<0.84){rioGen.largAlvo=W*0.55;rioGen.amp=W*0.14;rioGen.per=480+Math.random()*260;} // normal
-      else{rioGen.largAlvo=W*0.30;rioGen.amp=W*0.15;rioGen.per=240+Math.random()*140;}             // canal estreito
+      if(r<0.12){rioGen.largAlvo=W*0.28;rioGen.amp=W*0.34;rioGen.per=180+Math.random()*100;}      // MEANDRO FECHADO — curva muito pronunciada
+      else if(r<0.25){rioGen.largAlvo=W*0.34;rioGen.amp=W*0.22;rioGen.per=260+Math.random()*160;} // estreito, curva brusca
+      else if(r<0.45){rioGen.largAlvo=W*0.68;rioGen.amp=W*0.07;rioGen.per=800+Math.random()*400;} // largo calmo
+      else if(r<0.65){rioGen.largAlvo=W*0.48;rioGen.amp=W*0.22;rioGen.per=320+Math.random()*200;} // médio sinuoso
+      else if(r<0.82){rioGen.largAlvo=W*0.55;rioGen.amp=W*0.14;rioGen.per=480+Math.random()*260;} // normal
+      else{rioGen.largAlvo=W*0.28;rioGen.amp=W*0.16;rioGen.per=220+Math.random()*120;}             // canal estreito
       rioGen.fase=rioGen.fase+(yAbs/rioGen.per)*Math.PI*2;
-      rioGen.proxMuda=yAbs+400+Math.random()*500;
+      rioGen.proxMuda=yAbs+350+Math.random()*450;
     }
-    // Senoide para cx
+    // Senoide para cx — smoothing menor = curvas mais vivas
     const cxAlvo=W/2+rioGen.amp*Math.sin(yAbs/rioGen.per*Math.PI*2+rioGen.fase);
-    rioGen.cx=rioGen.cx+(cxAlvo-rioGen.cx)*0.10;
+    const smoothFator = rioGen.amp>W*0.28 ? 0.30 : rioGen.amp>W*0.18 ? 0.14 : 0.09;
+    rioGen.cx=rioGen.cx+(cxAlvo-rioGen.cx)*smoothFator;
     rioGen.larg=rioGen.larg+(rioGen.largAlvo-rioGen.larg)*0.022;
     // Garantir dentro da tela
     const mn=rioGen.larg/2+10,mx=W-rioGen.larg/2-10;
