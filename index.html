@@ -104,7 +104,7 @@ canvas{display:block;position:fixed;inset:0}
   <h1>DOURA<span>DO</span></h1>
   <div class="sub">Corumbá → Cáceres · 600 km · Piracema</div>
   <div class="linha"></div>
-  <p class="desc">Você é um <b>Salminus brasiliensis</b>.<br>
+  <p class="desc">Você é um <b><i>Salminus brasiliensis</i></b>.<br>
   É outubro — época da piracema.<br>
   Migre <b>600 km</b> contra a corrente.<br>
   <i>Desvie das barcaças. Coma. Desove.</i></p>
@@ -480,6 +480,23 @@ const DALIM=[
   {id:'fruta',   r:12,lbl:'Fruta',       info:'Frutos que caem no rio — ictiocoria.',pts:30, e:10,ic:'🫐'},
 ];
 let alims=[];
+let cardumes=[]; // grupos de peixinhos em zonas preservadas
+
+function geraCardume(){
+  const uc=emUC(km);
+  if(!uc) return null;
+  const yT=-20-Math.random()*30;
+  const s=segEm(yT2A(yT));
+  const n=4+Math.floor(Math.random()*5); // 4-8 peixes
+  const cx=s.cx+(Math.random()-0.5)*s.larg*0.5;
+  const peixes=Array.from({length:n},(_,i)=>({
+    ox:(Math.random()-0.5)*40,
+    oy:(Math.random()-0.5)*30,
+    ang:-Math.PI/2+((Math.random()-0.5)*0.4),
+    fase:Math.random()*Math.PI*2,
+  }));
+  return {x:cx, y:yT, peixes, encontrado:false};
+}
 
 function geraAlim(uc){
   const def=DALIM[Math.floor(Math.random()*DALIM.length)];
@@ -513,7 +530,7 @@ let ativo=false,raf,frame=0,pts=0,km=0,energia=100,barcCount=0,causaGO='';
 // ── INICIAR ──
 function iniciar(){
   pts=0;km=0;energia=100;barcCount=0;frame=0;causaGO='';ativo=true;ultimoMarco=-1;
-  obs=[];alims=[];parts=[];
+  obs=[];alims=[];parts=[];cardumes=[];
   inicRio();resetPx();
   // Alimentos iniciais
   for(let i=0;i<6;i++){
@@ -583,6 +600,9 @@ function update(){
   const iO=uc?9999:Math.max(28,65-km/META*37);
   if(frame%Math.floor(iO)===0){const o=geraObs(km);if(o){obs.push(o);barcCount++;}}
 
+  // Gerar cardumes nas UCs
+  if(uc && frame%90===0){ const c=geraCardume(); if(c) cardumes.push(c); }
+
   // Gerar alimentos
   const iA=uc?45:Math.max(130,220-km/META*70);
   if(frame%Math.floor(iA)===0){const a=geraAlim(!!uc);if(a)alims.push(a);}
@@ -650,6 +670,23 @@ function update(){
       return false;
     }
     return true;
+  });
+
+  // Atualizar cardumes
+  cardumes=cardumes.filter(c=>{
+    c.y+=vel*0.15; c.x+=(segEm(yT2A(c.y)).cx-c.x)*0.01;
+    if(c.y>H+60) return false;
+    if(!c.encontrado){
+      const dist=Math.hypot(px.x-c.x,px.y-c.y);
+      if(dist<60){
+        c.encontrado=true;
+        pts+=120; energia=Math.min(100,energia+12);
+        notif('Cardume de dourados!','Encontrou um cardume em área preservada. +120 pontos','u');
+        flash('🐟🐟🐟 CARDUME!','#2ecc71');
+        for(let i=0;i<14;i++) parts.push(mkP(c.x+(Math.random()-0.5)*40,c.y+(Math.random()-0.5)*30,'#f0c030'));
+      }
+    }
+    return !c.encontrado;
   });
 
   parts=parts.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.v-=p.dec;return p.v>0;});
@@ -810,6 +847,32 @@ function render(){
   alims.forEach(a=>drawAlim(a));
   // 6. Peixe
   if(ativo)drawPeixe();
+  // 6b. Cardumes
+  cardumes.forEach(c=>{
+    c.peixes.forEach(p=>{
+      const px2=c.x+p.ox, py2=c.y+p.oy;
+      const osc=Math.sin(frame*0.28+p.fase)*0.3;
+      g.save();g.translate(px2,py2);g.rotate(p.ang+osc*0.15);
+      // Corpinho do peixe do cardume
+      g.shadowColor='rgba(240,192,48,.6)';g.shadowBlur=6;
+      const bg=g.createRadialGradient(-4,0,0,0,0,9);
+      bg.addColorStop(0,'#ffe060');bg.addColorStop(.5,'#f0a820');bg.addColorStop(1,'#c06010');
+      g.fillStyle=bg;g.beginPath();g.ellipse(0,0,9,5,0,0,Math.PI*2);g.fill();
+      // Caudinha
+      g.fillStyle='#a05c10';
+      g.beginPath();g.moveTo(-7,0);g.lineTo(-12,-4+osc*3);g.lineTo(-12,4+osc*3);g.closePath();g.fill();
+      g.shadowBlur=0;
+      // Olhinho
+      g.fillStyle='#111';g.beginPath();g.arc(7,-1,1.5,0,Math.PI*2);g.fill();
+      g.restore();
+    });
+    // Halo pulsante ao redor do cardume
+    g.save();g.globalAlpha=0.15+Math.sin(frame*0.08)*0.08;
+    g.strokeStyle='#2ecc71';g.lineWidth=2;
+    g.beginPath();g.ellipse(c.x,c.y,55,40,0,0,Math.PI*2);g.stroke();
+    g.restore();
+  });
+
   // 7. Partículas
   parts.forEach(p=>{g.save();g.globalAlpha=Math.max(0,p.v);g.fillStyle=p.cor;g.beginPath();g.arc(p.x,p.y,p.r,0,Math.PI*2);g.fill();g.restore();});
   // 8. Vinheta suave
