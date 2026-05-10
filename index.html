@@ -66,6 +66,17 @@ canvas{display:block;position:fixed;inset:0}
 #notif.on{opacity:1}#notif.d{border-left-color:#ff4040}#notif.g{border-left-color:#4caf50}#notif.u{border-left-color:#2ecc71}
 #notif b{color:#f0c030}#notif.d b{color:#ff8080}#notif.g b{color:#80ee80}#notif.u b{color:#2ecc71}
 
+#pausa-taiama{position:fixed;inset:0;z-index:15;pointer-events:none;display:none}
+#pausa-taiama canvas{position:absolute;inset:0;width:100%;height:100%}
+#pausa-btn{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:16;
+  background:#2ecc71;color:#04100a;border:none;padding:12px 36px;
+  font-size:1rem;font-weight:700;letter-spacing:2px;border-radius:30px;
+  cursor:pointer;display:none;box-shadow:0 4px 20px rgba(46,204,113,.5)}
+#pausa-txt{position:fixed;top:20%;left:50%;transform:translateX(-50%);z-index:16;
+  background:rgba(4,16,10,.9);border:1px solid #2ecc71;border-radius:8px;
+  padding:10px 20px;color:#fff;font-size:.85rem;max-width:280px;text-align:center;
+  line-height:1.6;display:none}
+#pausa-txt b{color:#2ecc71}
 #flash{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
   font-size:1.8rem;font-weight:700;pointer-events:none;z-index:8;
   opacity:0;transition:opacity .15s;text-shadow:0 2px 12px rgba(0,0,0,.9);text-align:center}
@@ -124,6 +135,9 @@ canvas{display:block;position:fixed;inset:0}
 <div id="bara-km"><label>🐟 META 600km</label><div id="km-t"><div id="km-f"></div></div></div>
 <div id="marco"><b id="mnom"></b><br><span id="mdesc" style="font-size:.65rem;color:rgba(255,255,255,.5)"></span></div>
 <div id="notif"></div><div id="flash"></div>
+<div id="pausa-taiama"></div>
+<p id="pausa-txt"></p>
+<button id="pausa-btn" onclick="continuarMigracao()">▸ Continuar Migração</button>
 
 <!-- GAME OVER -->
 <div id="tgo">
@@ -343,7 +357,7 @@ function expandRio(ate){
     else if(yAbsKm<200) largMin = W*0.55; // Ladário
     else if(yAbsKm<370) largMin = W*0.44; // até Parque Nacional
     else if(yAbsKm<450) largMin = W*0.36; // Parque Nacional → estreita
-    else if(yAbsKm<520) largMin = W*0.30; // Rio Sepotuba → mais estreito
+    else if(yAbsKm<520) largMin = W*0.30; // Rio Jauru → mais estreito
     else                largMin = W*0.26; // → Cáceres: cabeceiras rasas
     rio.push({cx:rioGen.cx,larg:Math.max(largMin,rioGen.larg)});
   }
@@ -415,7 +429,7 @@ const MARCOS=[
   {km:150,nome:'Rio Miranda',              desc:'Confluência com afluente pantaneiro. Área de pesca ilegal.'},
   {km:280,nome:'🌿 Parque Nacional do Pantanal',desc:'Parque Nacional do Pantanal Matogrossense — 183.100 ha. Patrimônio Mundial UNESCO. ÁREA PROTEGIDA.',uc:true},
   {km:370,nome:'🌿 ESEC Taiamã',               desc:'Estação Ecológica de Taiamã — 68.500 ha. Berçário de peixes. 131 espécies. ÁREA PROTEGIDA.',uc:true},
-  {km:520,nome:'Rio Sepotuba',             desc:'Afluente próximo a Cáceres. Área de estudo da desova (Oliveira Junior et al., 2019).'},
+  {km:520,nome:'Rio Jauru',                desc:'Afluente do Rio Paraguai próximo a Cáceres. Importante área de reprodução do dourado. (Oliveira Junior et al., 2019).'},
   {km:600,nome:'🏆 Cáceres — Cabeceiras', desc:'Destino da migração. O dourado desova nas correntezas com cascalho.'},
 ];
 const ZONAS_UC=[{ini:270,fim:320,nome:'Parque Nacional'},{ini:355,fim:410,nome:'ESEC Taiamã'}];
@@ -452,8 +466,8 @@ function poolObs(km){
   if(km<150) return ['barcaca','draga','barcaca','helice','rede','barcaca','draga'];           // Ladário
   if(km<280) return ['rede','tronco','barcaca','rede','tronco','banco_oval','barcaca'];        // Rio Miranda
   if(km<420) return ['tronco','banco_oval','banco_longo','rede','tronco','banco_oval'];        // Pós-UC
-  if(km<520) return ['banco_oval','banco_longo','tronco','banco_oval','tronco','banco_longo']; // Sepotuba
-  return     ['banco_longo','banco_oval','tronco','banco_oval','banco_longo','tronco'];        // → Cáceres
+  if(km<520) return ['banco_oval','draga','tronco','banco_oval','barcaca','banco_longo'];       // Jauru: dragas
+  return     ['banco_longo','draga','tronco','banco_oval','draga','banco_longo','tronco'];   // → Cáceres: dragas + bancos
 }
 
 function geraObs(km){
@@ -494,14 +508,15 @@ let cardumes=[]; // grupos de peixinhos em zonas preservadas
 function geraCardume(){
   const uc=emUC(km);
   if(!uc) return null;
-  const yT=-20-Math.random()*30;
+  // Posicionar no centro da tela visível (não no topo)
+  const yT=H*0.25+Math.random()*H*0.35;
   const s=segEm(yT2A(yT));
-  const n=4+Math.floor(Math.random()*5); // 4-8 peixes
-  const cx=s.cx+(Math.random()-0.5)*s.larg*0.5;
+  const n=4+Math.floor(Math.random()*5);
+  const cx=s.cx+(Math.random()-0.5)*s.larg*0.4;
   const peixes=Array.from({length:n},(_,i)=>({
-    ox:(Math.random()-0.5)*40,
-    oy:(Math.random()-0.5)*30,
-    ang:-Math.PI/2+((Math.random()-0.5)*0.4),
+    ox:(Math.random()-0.5)*50,
+    oy:(Math.random()-0.5)*35,
+    ang:-Math.PI/2+((Math.random()-0.5)*0.5),
     fase:Math.random()*Math.PI*2,
   }));
   return {x:cx, y:yT, peixes, encontrado:false};
@@ -535,6 +550,7 @@ function flash(txt,cor){flEl.textContent=txt;flEl.style.color=cor;flEl.style.opa
 
 // ── ESTADO ──
 let ativo=false,raf,frame=0,pts=0,km=0,energia=100,barcCount=0,causaGO='';
+let pausaTaiama=false,pausaFrame=0,pausaAlims=[],pausaEntrou=false;
 
 // ── INICIAR ──
 function iniciar(){
@@ -571,7 +587,11 @@ function iniciar(){
   cancelAnimationFrame(raf);loop();
 }
 
-function loop(){raf=requestAnimationFrame(loop);update();render();}
+function loop(){
+  raf=requestAnimationFrame(loop);
+  if(pausaTaiama){ updatePausa(); renderPausa(); }
+  else{ update(); render(); }
+}
 
 // ── UPDATE ──
 function update(){
@@ -860,19 +880,32 @@ function render(){
   cardumes.forEach(c=>{
     c.peixes.forEach(p=>{
       const px2=c.x+p.ox, py2=c.y+p.oy;
-      const osc=Math.sin(frame*0.28+p.fase)*0.3;
-      g.save();g.translate(px2,py2);g.rotate(p.ang+osc*0.15);
-      // Corpinho do peixe do cardume
-      g.shadowColor='rgba(240,192,48,.6)';g.shadowBlur=6;
-      const bg=g.createRadialGradient(-4,0,0,0,0,9);
-      bg.addColorStop(0,'#ffe060');bg.addColorStop(.5,'#f0a820');bg.addColorStop(1,'#c06010');
-      g.fillStyle=bg;g.beginPath();g.ellipse(0,0,9,5,0,0,Math.PI*2);g.fill();
-      // Caudinha
-      g.fillStyle='#a05c10';
-      g.beginPath();g.moveTo(-7,0);g.lineTo(-12,-4+osc*3);g.lineTo(-12,4+osc*3);g.closePath();g.fill();
-      g.shadowBlur=0;
-      // Olhinho
-      g.fillStyle='#111';g.beginPath();g.arc(7,-1,1.5,0,Math.PI*2);g.fill();
+      const osc=Math.sin(frame*0.28+p.fase)*0.38;
+      g.save();g.translate(px2,py2);g.rotate(p.ang);
+      // Usar sprite do dourado em miniatura
+      if(sprOk('dourado_corpo')&&sprOk('dourado_cauda')){
+        const sc=0.42; // miniatura do dourado
+        const spC=IMGS.dourado_corpo, spCa=IMGS.dourado_cauda;
+        const sw2=spC.w*sc, shC=spC.h*sc, shCa=spCa.h*sc;
+        g.rotate(Math.PI/2); // alinhar cabeça com direção
+        g.shadowColor='rgba(240,192,48,.5)';g.shadowBlur=5;
+        // Caudinha animada
+        g.save();g.translate(0,shC*0.82);g.rotate(osc);
+        g.drawImage(spCa.el,-sw2/2,0,sw2,shCa);g.restore();
+        // Corpinho
+        g.shadowBlur=0;
+        g.drawImage(spC.el,-sw2/2,-shC*0.52,sw2,shC);
+      } else {
+        // Fallback canvas
+        g.shadowColor='rgba(240,192,48,.6)';g.shadowBlur=6;
+        const bg=g.createRadialGradient(-4,0,0,0,0,9);
+        bg.addColorStop(0,'#ffe060');bg.addColorStop(.5,'#f0a820');bg.addColorStop(1,'#c06010');
+        g.fillStyle=bg;g.beginPath();g.ellipse(0,0,9,5,0,0,Math.PI*2);g.fill();
+        g.fillStyle='#a05c10';
+        g.beginPath();g.moveTo(-7,0);g.lineTo(-12,-4+osc*3);g.lineTo(-12,4+osc*3);g.closePath();g.fill();
+        g.shadowBlur=0;
+        g.fillStyle='#111';g.beginPath();g.arc(7,-1,1.5,0,Math.PI*2);g.fill();
+      }
       g.restore();
     });
     // Halo pulsante ao redor do cardume
@@ -1218,6 +1251,151 @@ function drawPeixe(){
       v:.7+Math.random()*.2,dec:.04,r:1.5+Math.random()*2,cor:'rgba(180,230,255,.6)'
     });
   }
+}
+
+// ── PAUSA ESEC TAIAMÃ ──
+// Lagoa grande onde o peixe descansa antes de entrar na UC
+const LAGOA_T = {
+  x: 0, y: 0, // calculado no momento
+  r: 0,        // raio
+  alims: [],
+};
+
+function iniciarPausaTaiama(){
+  pausaTaiama=true; pausaFrame=0; pausaEntrou=false;
+  // Calcular posição da lagoa (margem direita, bem à direita)
+  const seg=segEm(yT2A(H*0.35));
+  // Escolher lado com mais espaço
+  const margE2=seg.cx-seg.larg/2, margD2=seg.cx+seg.larg/2;
+  const espE=margE2-10, espD=W-margD2-10;
+  if(espD>=espE){
+    LAGOA_T.r=Math.min(80,espD*0.7);
+    LAGOA_T.x=Math.min(W-LAGOA_T.r-8, margD2+LAGOA_T.r*0.6);
+  } else {
+    LAGOA_T.r=Math.min(80,espE*0.7);
+    LAGOA_T.x=Math.max(LAGOA_T.r+8, margE2-LAGOA_T.r*0.6);
+  }
+  LAGOA_T.y = H*0.38;
+  LAGOA_T.lado = espD>=espE ? 1 : -1;
+  // Gerar alimentos dentro da lagoa
+  pausaAlims=[];
+  const tipos=['sabalo','peixinho','camaro','fruta','inseto'];
+  for(let i=0;i<7;i++){
+    const ang=Math.random()*Math.PI*2;
+    const d=Math.random()*LAGOA_T.r*0.65;
+    const def=DALIM.find(d2=>d2.id===tipos[i%tipos.length]);
+    pausaAlims.push({
+      ...def,
+      x:LAGOA_T.x+Math.cos(ang)*d,
+      y:LAGOA_T.y+Math.sin(ang)*d,
+      p:Math.random()*Math.PI*2
+    });
+  }
+  // Mostrar UI
+  document.getElementById('pausa-txt').innerHTML=
+    '<b>🌿 ESEC Taiamã</b><br>Entre na lagoa para comer e descansar.<br>Quando estiver pronto, continue a migração.';
+  document.getElementById('pausa-txt').style.display='block';
+  document.getElementById('pausa-btn').style.display='block';
+  notif('🌿 ESEC Taiamã','Área Ecológica protegida — 68.500 ha. Entre na lagoa e descanse.','u');
+  flash('🌿 PAUSA EM TAIAMÃ','#2ecc71');
+}
+
+function continuarMigracao(){
+  pausaTaiama=false;
+  document.getElementById('pausa-txt').style.display='none';
+  document.getElementById('pausa-btn').style.display='none';
+  pausaAlims=[];
+}
+
+function updatePausa(){
+  pausaFrame++;
+  // Scroll parado — só movimenta o peixe
+  moverPeixe();
+  // Clamp ao canal + lagoa
+  const sP=segEm(yT2A(px.y));
+  let bEP=sP.cx-sP.larg/2+px.r, bDP=sP.cx+sP.larg/2-px.r;
+  if(LAGOA_T.lado>0) bDP=Math.min(W-px.r-4, LAGOA_T.x+LAGOA_T.r-px.r);
+  else               bEP=Math.max(px.r+4,    LAGOA_T.x-LAGOA_T.r+px.r);
+  if(px.x<bEP){px.x=bEP;if(px.vx<0)px.vx*=-0.35;}
+  if(px.x>bDP){px.x=bDP;if(px.vx>0)px.vx*=-0.35;}
+  px.y=Math.max(px.r+4,Math.min(H-px.r-4,px.y));
+
+  // Verificar se peixe entrou na lagoa
+  const distLagoa=Math.hypot(px.x-LAGOA_T.x,px.y-LAGOA_T.y);
+  if(distLagoa<LAGOA_T.r && !pausaEntrou){
+    pausaEntrou=true;
+    energia=Math.min(100,energia+0.15); // recupera energia
+  }
+  if(pausaEntrou) energia=Math.min(100,energia+0.08);
+
+  // Coletar alimentos da lagoa
+  pausaAlims=pausaAlims.filter(a=>{
+    a.p+=0.08;
+    if((px.x-a.x)**2+(px.y-a.y)**2<(a.r+px.r*0.85)**2){
+      pts+=a.pts; energia=Math.min(100,energia+a.e);
+      notif(a.lbl,a.info,'g'); flash(`+${a.pts} ${a.ic}`,'#f0c030');
+      for(let i=0;i<6;i++) parts.push(mkP(a.x,a.y,'#f0c030'));
+      return false;
+    }
+    return true;
+  });
+  parts=parts.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.v-=p.dec;return p.v>0;});
+  if(px.inv>0)px.inv--;
+  document.getElementById('h-p').textContent=pts.toLocaleString();
+  const bf=document.getElementById('be-f');
+  bf.style.width=energia+'%';
+  bf.style.background=energia>50?'#f0c030':energia>25?'#ff9800':'#ff4040';
+}
+
+function renderPausa(){
+  // Fundo parado — desenhar tela normal sem scroll
+  render();
+  // Lagoa grande com gradiente
+  g.save();
+  const gr=g.createRadialGradient(LAGOA_T.x,LAGOA_T.y,0,LAGOA_T.x,LAGOA_T.y,LAGOA_T.r);
+  gr.addColorStop(0,'rgba(16,100,130,.92)');
+  gr.addColorStop(0.6,'rgba(12,80,105,.88)');
+  gr.addColorStop(1,'rgba(8,55,75,.6)');
+  g.fillStyle=gr;
+  g.beginPath();g.arc(LAGOA_T.x,LAGOA_T.y,LAGOA_T.r,0,Math.PI*2);g.fill();
+  // Borda verde animada
+  g.strokeStyle=`rgba(46,204,113,${0.5+Math.sin(pausaFrame*0.06)*0.3})`;
+  g.lineWidth=3;g.stroke();
+  // Canal ligando rio à lagoa
+  const seg2=segEm(yT2A(LAGOA_T.y));
+  const margC=LAGOA_T.lado>0?(seg2.cx+seg2.larg/2):(seg2.cx-seg2.larg/2);
+  const cg=g.createLinearGradient(margC,LAGOA_T.y,LAGOA_T.x,LAGOA_T.y);
+  cg.addColorStop(0,'rgba(18,110,155,.8)');cg.addColorStop(1,'rgba(14,85,120,.6)');
+  g.fillStyle=cg;
+  g.beginPath();
+  g.moveTo(margC,LAGOA_T.y-16);g.lineTo(LAGOA_T.x,LAGOA_T.y-16);
+  g.lineTo(LAGOA_T.x,LAGOA_T.y+16);g.lineTo(margC,LAGOA_T.y+16);
+  g.closePath();g.fill();
+  // Aguapé na lagoa
+  if(sprOk('aguape')){
+    const sp=IMGS.aguape;
+    [[0.3,0.2],[-.25,0.3],[0.1,-.3]].forEach(([ox,oy])=>{
+      const ax=LAGOA_T.x+ox*LAGOA_T.r,ay=LAGOA_T.y+oy*LAGOA_T.r;
+      g.save();g.globalAlpha=0.85;
+      g.drawImage(sp.el,ax-sp.w*0.4,ay-sp.h*0.4,sp.w*0.8,sp.h*0.8);
+      g.restore();
+    });
+  }
+  // Alimentos dentro da lagoa
+  pausaAlims.forEach(a=>desenAlim(a));
+  // Peixe
+  desenPeixe();
+  // Seta indicando a lagoa se peixe ainda não entrou
+  if(!pausaEntrou){
+    g.save();
+    g.fillStyle=`rgba(46,204,113,${0.7+Math.sin(pausaFrame*0.1)*0.3})`;
+    g.font='bold 22px sans-serif';g.textAlign='center';
+    g.fillText('→',LAGOA_T.x-LAGOA_T.r-10,LAGOA_T.y+8);
+    g.restore();
+  }
+  // Partículas
+  parts.forEach(p=>{g.save();g.globalAlpha=Math.max(0,p.v);g.fillStyle=p.cor;g.beginPath();g.arc(p.x,p.y,p.r,0,Math.PI*2);g.fill();g.restore();});
+  g.restore();
 }
 
 // ── GAME OVER ──
