@@ -235,7 +235,7 @@ const TIPOS_ARV=['ipe_roxo','palmeira','ipe_amarelo','arv_verde'];
 let vegMargem=[];
 function gerarVegMargem(){
   vegMargem=[];
-  const TOTAL=14000;
+  const TOTAL=90000; // cobre todo o percurso de 600km
 
   // Camada FUNDO: árvores grandes mais longe da beira (30-50px)
   for(let yAbs=0;yAbs<TOTAL;yAbs+=90){
@@ -289,7 +289,7 @@ function gerarBaias(){
   let yAbs=800;
   let lado=1;
   let idx=0;
-  while(yAbs<14000*6){
+  while(yAbs<90000){
     const hash=Math.abs(Math.sin(yAbs*0.031+idx*1.7));
     const hash2=Math.abs(Math.sin(yAbs*0.053+idx*2.3));
     // Canal de conexão: estreito e longo, conecta rio à baía
@@ -336,7 +336,16 @@ function expandRio(ate){
     // Garantir dentro da tela
     const mn=rioGen.larg/2+10,mx=W-rioGen.larg/2-10;
     rioGen.cx=Math.max(mn,Math.min(mx,rioGen.cx));
-    rio.push({cx:rioGen.cx,larg:Math.max(W*0.28,rioGen.larg)});
+    // Largura do Rio Paraguai varia ao longo do percurso
+    const yAbsKm = rio.length*PASSO*0.0333/6;
+    let largMin;
+    if(yAbsKm<80)       largMin = W*0.65; // Corumbá: muito largo
+    else if(yAbsKm<200) largMin = W*0.55; // Ladário
+    else if(yAbsKm<370) largMin = W*0.44; // até Parque Nacional
+    else if(yAbsKm<450) largMin = W*0.36; // Parque Nacional → estreita
+    else if(yAbsKm<520) largMin = W*0.30; // Rio Sepotuba → mais estreito
+    else                largMin = W*0.26; // → Cáceres: cabeceiras rasas
+    rio.push({cx:rioGen.cx,larg:Math.max(largMin,rioGen.larg)});
   }
 }
 
@@ -404,12 +413,12 @@ const MARCOS=[
   {km:0,  nome:'Porto de Corumbá',         desc:'Maior porto fluvial do Pantanal. Barcaças carregando soja e minério.'},
   {km:20, nome:'Ladário',                  desc:'Base Naval. Efluentes industriais contaminam o rio.'},
   {km:150,nome:'Rio Miranda',              desc:'Confluência com afluente pantaneiro. Área de pesca ilegal.'},
-  {km:280,nome:'🌿 ESEC Taiamã',          desc:'Estação Ecológica de Taiamã — 68.500 ha. Berçário de peixes. ÁREA PROTEGIDA.',uc:true},
-  {km:370,nome:'🌿 Parque Nacional',       desc:'Parque Nacional do Pantanal — 183.100 ha. Patrimônio UNESCO. ÁREA PROTEGIDA.',uc:true},
+  {km:280,nome:'🌿 Parque Nacional do Pantanal',desc:'Parque Nacional do Pantanal Matogrossense — 183.100 ha. Patrimônio Mundial UNESCO. ÁREA PROTEGIDA.',uc:true},
+  {km:370,nome:'🌿 ESEC Taiamã',               desc:'Estação Ecológica de Taiamã — 68.500 ha. Berçário de peixes. 131 espécies. ÁREA PROTEGIDA.',uc:true},
   {km:520,nome:'Rio Sepotuba',             desc:'Afluente próximo a Cáceres. Área de estudo da desova (Oliveira Junior et al., 2019).'},
   {km:600,nome:'🏆 Cáceres — Cabeceiras', desc:'Destino da migração. O dourado desova nas correntezas com cascalho.'},
 ];
-const ZONAS_UC=[{ini:270,fim:315},{ini:360,fim:405}];
+const ZONAS_UC=[{ini:270,fim:320,nome:'Parque Nacional'},{ini:355,fim:410,nome:'ESEC Taiamã'}];
 const META=600;
 let ultimoMarco=-1;
 
@@ -757,7 +766,7 @@ function render(){
     const spB=IMGS.baia_img;
     baias.forEach(b=>{
       const yT_b=yA2T(b.yAbs);
-      if(yT_b<-spB.h-20||yT_b>H+spB.h+20) return;
+      if(yT_b<-spB.h-100||yT_b>H+spB.h+20) return;
       const seg=segEm(b.yAbs);
       const marg=b.lado>0?(seg.cx+seg.larg/2):(seg.cx-seg.larg/2);
       // Centro da baía: além das árvores (canalLen já inclui distância)
@@ -812,7 +821,7 @@ function render(){
   // Camadas 2-4: vegetação pré-gerada (vegMargem)
   vegMargem.forEach(v=>{
     const yT=yA2T(v.yAbs);
-    if(yT<-40||yT>H+40) return; // fora da tela, pular
+    if(yT<-120||yT>H+40) return; // fora da tela, pular
     const seg=segEm(v.yAbs);
     // Recalcular x baseado na margem atual do canal nessa posição
     const marg=v.lado<0 ? seg.cx-seg.larg/2 : seg.cx+seg.larg/2;
