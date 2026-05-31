@@ -281,19 +281,30 @@ async function fbPush(path, data){
 
 async function carregarRankingGlobal(){
   const dados = await fbGet('/ranking');
-  if(!dados) return [];
-  return Object.values(dados)
-    .sort((a,b)=>b.km-a.km)
-    .slice(0,20);
+  if(!dados || typeof dados !== 'object') return [];
+  // Firebase retorna { chaveAleatoria: { nome, km, pts, ... }, ... }
+  // Filtrar só entradas válidas com os campos esperados
+  const lista = Object.values(dados).filter(x =>
+    x && typeof x === 'object' &&
+    (typeof x.km === 'number' || typeof x.km === 'string') &&
+    (typeof x.nome === 'string')
+  ).map(x => ({
+    nome: x.nome || 'Anônimo',
+    km:   parseFloat(x.km)   || 0,
+    pts:  parseInt(x.pts)    || 0,
+    data: x.data || '',
+  }));
+  return lista.sort((a,b) => b.km - a.km).slice(0, 20);
 }
 
 async function salvarRankingGlobal(nome, pts, km){
   if(km<1) return; // só salva quem migrou pelo menos 1km
   await fbPush('/ranking', {
-    nome: nome||'Anônimo',
-    pts, km,
+    nome: String(nome||'Anônimo').substring(0,20),
+    pts:  Number(pts)  || 0,
+    km:   Number(km)   || 0,
     data: new Date().toLocaleDateString('pt-BR'),
-    ts: Date.now()
+    ts:   Date.now()
   });
 }
 
@@ -310,9 +321,9 @@ async function renderRkGlobal(){
   el.innerHTML = lista.slice(0,10).map((x,i)=>`
     <div class="rr">
       <span class="rpos">${ic[i]||i+1+'°'}</span>
-      <span style="flex:1">${x.nome}</span>
-      <span style="color:#7bc87a;font-size:.75rem;margin-right:6px">${x.km}km</span>
-      <span class="rpts">${(x.pts||0).toLocaleString()}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis">${x.nome}</span>
+      <span style="color:#7bc87a;font-size:.75rem;margin-right:4px">${x.km.toFixed(1)}km</span>
+      <span class="rpts">${(x.pts).toLocaleString()}</span>
     </div>`).join('');
 }
 
