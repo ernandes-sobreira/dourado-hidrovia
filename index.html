@@ -6,8 +6,14 @@
 <title>Dourado — Migração do Pantanal</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0a2a0a;overflow:hidden;touch-action:none;font-family:'Segoe UI',sans-serif}
-canvas{display:block;position:fixed;inset:0}
+body{background:#0a2a0a;overflow:hidden;touch-action:none;font-family:'Segoe UI',sans-serif;
+  display:flex;justify-content:center;align-items:stretch}
+#game-wrap{position:relative;width:100%;max-width:480px;height:100vh;overflow:hidden;flex-shrink:0}
+canvas{display:block;position:absolute;inset:0;width:100%!important;height:100%!important}
+/* Laterais escuras no PC */
+body::before,body::after{content:'';position:fixed;top:0;bottom:0;width:calc((100vw - 480px)/2);
+  background:#061008;z-index:1}
+body::before{left:0}body::after{right:0}
 
 /* TELA INICIAL */
 #ti{position:fixed;inset:0;z-index:30;background:linear-gradient(180deg,#061408 0%,#0a2010 60%,#061408 100%);
@@ -108,7 +114,7 @@ canvas{display:block;position:fixed;inset:0}
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
+<div id="game-wrap"><canvas id="c"></canvas></div>
 
 <!-- INÍCIO -->
 <div id="ti">
@@ -122,7 +128,29 @@ canvas{display:block;position:fixed;inset:0}
   <p class="sci">Migração reprodutiva: oct–nov · Bacia Alto Paraguai<br>
   Wantzen et al. (2024) · Oliveira Junior et al. (2019)</p>
   <button class="btn" id="bini">▸ MIGRAR</button>
-  <div class="rbox"><h3>Maiores migrações</h3><div id="rklista"></div></div>
+  <div style="display:flex;gap:0;width:100%;max-width:320px">
+    <button onclick="mostrarAba('local')" id="aba-local"
+      style="flex:1;padding:7px 4px;border:none;border-radius:8px 0 0 0;cursor:pointer;
+      background:#f0c030;color:#0a1a08;font-size:.68rem;font-weight:700;letter-spacing:1px">
+      MEU RECORDE
+    </button>
+    <button onclick="mostrarAba('global')" id="aba-global"
+      style="flex:1;padding:7px 4px;border:none;border-radius:0 8px 0 0;cursor:pointer;
+      background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);font-size:.68rem;font-weight:700;letter-spacing:1px">
+      🌎 GLOBAL
+    </button>
+  </div>
+  <div class="rbox" style="border-radius:0 0 8px 8px;margin-top:0;width:100%;max-width:320px">
+    <div id="painel-local">
+      <div id="rklista"></div>
+    </div>
+    <div id="painel-global" style="display:none">
+      <h3 style="font-size:.65rem;color:#7bc87a;letter-spacing:2px;text-transform:uppercase;text-align:center;margin-bottom:7px">🌎 Ranking Mundial</h3>
+      <div id="rk-global-lista">
+        <div class="rr" style="justify-content:center;color:rgba(255,255,255,.3);font-style:italic;font-size:.75rem">Carregando...</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- HUD -->
@@ -130,6 +158,7 @@ canvas{display:block;position:fixed;inset:0}
   <div class="hc"><div class="hl">Pontos</div><div class="hv" id="hpts">0</div></div>
   <div class="hc" style="text-align:center"><div class="hl">Km migrados</div><div class="hv" id="hkm">0.0</div></div>
   <div class="hc" style="text-align:right"><div class="hl">Recorde</div><div class="hvs" id="hrec">0km</div></div>
+  <div class="hc" onclick="toggleMute()" id="btn-mute" style="cursor:pointer;padding:4px 10px;font-size:1.1rem" title="Som">🔊</div>
 </div>
 <div id="bara-e"><label>⚡ ENERGIA</label><div id="be-t"><div id="be-f"></div></div></div>
 <div id="bara-km"><label>🐟 META 600km</label><div id="km-t"><div id="km-f"></div></div></div>
@@ -217,10 +246,215 @@ const IMGS={};
 })();
 function sprOk(k){const s=IMGS[k];return s&&s.el.complete&&s.el.naturalWidth>0;}
 
+
+// ══════════════════════════════════════
+// FIREBASE — RANKING GLOBAL
+// ══════════════════════════════════════
+const FB_URL = 'https://dourado-pantanal-default-rtdb.firebaseio.com';
+let rankingGlobal = [];
+
+async function fbGet(path){
+  try{
+    const r = await fetch(FB_URL+path+'.json');
+    return await r.json();
+  }catch(e){ return null; }
+}
+
+async function fbSet(path, data){
+  try{
+    await fetch(FB_URL+path+'.json', {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+  }catch(e){}
+}
+
+async function fbPush(path, data){
+  try{
+    const r = await fetch(FB_URL+path+'.json', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+    return await r.json();
+  }catch(e){ return null; }
+}
+
+async function carregarRankingGlobal(){
+  const dados = await fbGet('/ranking');
+  if(!dados) return [];
+  return Object.values(dados)
+    .sort((a,b)=>b.km-a.km)
+    .slice(0,20);
+}
+
+async function salvarRankingGlobal(nome, pts, km){
+  if(km<1) return; // só salva quem migrou pelo menos 1km
+  await fbPush('/ranking', {
+    nome: nome||'Anônimo',
+    pts, km,
+    data: new Date().toLocaleDateString('pt-BR'),
+    ts: Date.now()
+  });
+}
+
+async function renderRkGlobal(){
+  const lista = await carregarRankingGlobal();
+  rankingGlobal = lista;
+  const el = document.getElementById('rk-global-lista');
+  if(!el) return;
+  if(!lista.length){
+    el.innerHTML='<div class="rr" style="justify-content:center;color:rgba(255,255,255,.22);font-style:italic">Seja o primeiro!</div>';
+    return;
+  }
+  const ic=['🥇','🥈','🥉'];
+  el.innerHTML = lista.slice(0,10).map((x,i)=>`
+    <div class="rr">
+      <span class="rpos">${ic[i]||i+1+'°'}</span>
+      <span style="flex:1">${x.nome}</span>
+      <span style="color:#7bc87a;font-size:.75rem;margin-right:6px">${x.km}km</span>
+      <span class="rpts">${(x.pts||0).toLocaleString()}</span>
+    </div>`).join('');
+}
+
+
+// ══════════════════════════════════════
+// SOM AMBIENTAL — Web Audio API
+// Rio: ruído branco filtrado + murmúrio de água
+// Pássaros: ocasionais nas UCs
+// ══════════════════════════════════════
+let audioCtx = null, somAtivo = false;
+let noiseNode = null, filtroRio = null, gainRio = null;
+let oscPassaro = null, gainPassaro = null;
+
+function iniciarSom(){
+  if(somAtivo) return;
+  try{
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    
+    // ── Ruído de água corrente ──
+    // Buffer de ruído branco
+    const bufSize = audioCtx.sampleRate * 3; // 3 segundos em loop
+    const buffer = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<bufSize;i++) data[i]=(Math.random()*2-1);
+    
+    noiseNode = audioCtx.createBufferSource();
+    noiseNode.buffer = buffer;
+    noiseNode.loop = true;
+    
+    // Filtro passa-baixa — sons graves do rio
+    filtroRio = audioCtx.createBiquadFilter();
+    filtroRio.type = 'lowpass';
+    filtroRio.frequency.value = 600;
+    filtroRio.Q.value = 0.8;
+    
+    // Segundo filtro — textura da água
+    const filtro2 = audioCtx.createBiquadFilter();
+    filtro2.type = 'bandpass';
+    filtro2.frequency.value = 400;
+    filtro2.Q.value = 1.2;
+    
+    // Modulação leve (ondulação do som)
+    const lfo = audioCtx.createOscillator();
+    lfo.frequency.value = 0.15; // oscilação lenta
+    const lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = 80;
+    lfo.connect(lfoGain);
+    lfoGain.connect(filtroRio.frequency);
+    lfo.start();
+    
+    gainRio = audioCtx.createGain();
+    gainRio.gain.value = 0.18;
+    
+    noiseNode.connect(filtroRio);
+    filtroRio.connect(filtro2);
+    filtro2.connect(gainRio);
+    gainRio.connect(audioCtx.destination);
+    noiseNode.start();
+    
+    // ── Som de impacto / alerta (colisão) ──
+    somAtivo = true;
+  }catch(e){ console.log('Audio não disponível'); }
+}
+
+function pararSom(){
+  if(!audioCtx||!somAtivo) return;
+  try{
+    gainRio.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5);
+    setTimeout(()=>{ try{ noiseNode.stop(); audioCtx.close(); }catch(e){} }, 1500);
+    somAtivo = false;
+  }catch(e){}
+}
+
+function somColisao(){
+  if(!audioCtx||!somAtivo) return;
+  try{
+    const osc = audioCtx.createOscillator();
+    const g2 = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.value = 180;
+    g2.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    g2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+0.35);
+    osc.connect(g2); g2.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime+0.35);
+  }catch(e){}
+}
+
+function somComer(){
+  if(!audioCtx||!somAtivo) return;
+  try{
+    const osc = audioCtx.createOscillator();
+    const g2 = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(520, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(820, audioCtx.currentTime+0.15);
+    g2.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    g2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+0.25);
+    osc.connect(g2); g2.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime+0.25);
+  }catch(e){}
+}
+
+function somUC(){
+  if(!audioCtx||!somAtivo) return;
+  // Som de pássaro pantaneiro (trinado sintético)
+  try{
+    const notas=[600,800,650,900,700];
+    notas.forEach((freq,i)=>{
+      const osc=audioCtx.createOscillator();
+      const g2=audioCtx.createGain();
+      osc.type='sine';
+      osc.frequency.value=freq;
+      const t=audioCtx.currentTime+i*0.12;
+      g2.gain.setValueAtTime(0,t);
+      g2.gain.linearRampToValueAtTime(0.15,t+0.04);
+      g2.gain.exponentialRampToValueAtTime(0.001,t+0.14);
+      osc.connect(g2);g2.connect(audioCtx.destination);
+      osc.start(t);osc.stop(t+0.15);
+    });
+  }catch(e){}
+}
+
+// Ajustar volume do rio baseado na zona (UCs mais tranquilas)
+function ajustarSomZona(emUC){
+  if(!gainRio||!filtroRio) return;
+  if(emUC){
+    gainRio.gain.setTargetAtTime(0.10, audioCtx.currentTime, 1.5);
+    filtroRio.frequency.setTargetAtTime(300, audioCtx.currentTime, 1.5);
+  } else {
+    gainRio.gain.setTargetAtTime(0.18, audioCtx.currentTime, 1.5);
+    filtroRio.frequency.setTargetAtTime(600, audioCtx.currentTime, 1.5);
+  }
+}
+
 // ── CANVAS ──
 const cv=document.getElementById('c'),g=cv.getContext('2d');
 let W=0,H=0;
-function rsz(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+function rsz(){
+  const wrap=document.getElementById('game-wrap');
+  W=cv.width=wrap.offsetWidth;
+  H=cv.height=wrap.offsetHeight||window.innerHeight;
+}
 rsz();window.addEventListener('resize',rsz);
 
 // ── RANKING ──
@@ -335,7 +569,7 @@ function expandRio(ate){
     const yAbs=rio.length*PASSO;
     if(yAbs>=rioGen.proxMuda){
       const r=Math.random();
-      if(r<0.12){rioGen.largAlvo=W*0.28;rioGen.amp=W*0.34;rioGen.per=180+Math.random()*100;}      // MEANDRO FECHADO — curva muito pronunciada
+      if(r<0.12){rioGen.largAlvo=W*0.32;rioGen.amp=W*0.32;rioGen.per=190+Math.random()*110;}      // MEANDRO FECHADO — curva muito pronunciada
       else if(r<0.25){rioGen.largAlvo=W*0.34;rioGen.amp=W*0.22;rioGen.per=260+Math.random()*160;} // estreito, curva brusca
       else if(r<0.45){rioGen.largAlvo=W*0.68;rioGen.amp=W*0.07;rioGen.per=800+Math.random()*400;} // largo calmo
       else if(r<0.65){rioGen.largAlvo=W*0.48;rioGen.amp=W*0.22;rioGen.per=320+Math.random()*200;} // médio sinuoso
@@ -361,7 +595,9 @@ function expandRio(ate){
     else if(yAbsKm<450) largMin = W*0.36; // Parque Nacional → estreita
     else if(yAbsKm<520) largMin = W*0.30; // Rio Jauru → mais estreito
     else                largMin = W*0.26; // → Cáceres: cabeceiras rasas
-    rio.push({cx:rioGen.cx,larg:Math.max(largMin,rioGen.larg)});
+    // Mínimo absoluto: canal sempre navegável (peixe r=16 + espaço)
+    const largFinal=Math.max(largMin, rioGen.larg, 68);
+    rio.push({cx:rioGen.cx,larg:largFinal});
   }
 }
 
@@ -615,7 +851,7 @@ function update(){
       document.getElementById('mdesc').textContent=m.desc;
       document.getElementById('marco').style.display='block';
       notif(m.nome,m.desc,m.uc?'u':'');
-      if(m.uc){flash('🌿 ÁREA PROTEGIDA','#2ecc71');pts+=500;}
+      if(m.uc){flash('🌿 ÁREA PROTEGIDA','#2ecc71');pts+=500;somUC();}
       setTimeout(()=>document.getElementById('marco').style.display='none',5000);
     }
   });
@@ -1089,11 +1325,9 @@ function drawHelice(r){
 function drawRede(o){
   const s=segEm(yT2A(o.y));
   const lado=o._lado||1;
-  // Buraco = 38% do canal, sempre do lado indicado
   const buraco=s.larg*0.52;
   const cE=-s.larg/2;
   const cD= s.larg/2;
-  // Zona COM rede
   const rE=lado>0?cE:cD-s.larg*(1-0.52);
   const rD=lado>0?cE+s.larg*(1-0.52):cD;
   const redeW=rD-rE;
@@ -1101,35 +1335,56 @@ function drawRede(o){
 
   g.save();g.translate(desloc,0);
 
+  // ── Rede vista de cima — submersa na água ──
+  // Espessura fina: a rede é uma faixa horizontal atravessando o canal
+  const espessura=18; // altura visual da rede na água
+
   if(sprOk('rede')){
     const sp=IMGS.rede;
-    // Escalar sprite para cobrir a zona da rede
-    const scW=redeW/sp.w;
-    const sw=redeW;
-    const sh=sp.h*scW;
-    // Prender sprite na zona da rede
+    // Sprite comprimido verticalmente — vista de cima da rede na água
+    // Largura = zona da rede, altura = espessura fina
     g.save();
-    g.shadowColor='rgba(180,120,40,.5)';g.shadowBlur=8;
-    g.drawImage(sp.el, rE, -sh/2, sw, sh);
-    g.shadowBlur=0;
-    // Boias nas pontas
-    g.fillStyle='#cc3300';
-    [rE-6, rD+6].forEach(bx=>{g.beginPath();g.arc(bx,0,7,0,Math.PI*2);g.fill();});
+    // Sombra na água (efeito submerso)
+    g.shadowColor='rgba(0,0,0,.35)';g.shadowBlur=6;g.shadowOffsetY=3;
+    // Leve transparência — está dentro da água
+    g.globalAlpha=0.78;
+    g.drawImage(sp.el, rE, -espessura/2, redeW, espessura);
+    g.shadowBlur=0;g.shadowOffsetY=0;g.globalAlpha=1;
     g.restore();
   } else {
-    // Fallback: rede desenhada
-    g.strokeStyle=`rgba(200,160,60,${.7+Math.sin(frame*.1)*.3})`;g.lineWidth=2;
-    for(let x=rE;x<=rD;x+=14){g.beginPath();g.moveTo(x,-o.alt/2);g.lineTo(x,o.alt/2);g.stroke();}
-    g.strokeStyle='rgba(220,180,80,.9)';g.lineWidth=3;
-    g.beginPath();g.moveTo(rE,0);g.lineTo(rD,0);g.stroke();
-    g.fillStyle='#cc3300';[rE-6,rD+6].forEach(bx=>{g.beginPath();g.arc(bx,0,7,0,Math.PI*2);g.fill();});
+    // Fallback: faixa de malha
+    g.strokeStyle=`rgba(180,130,40,${.65+Math.sin(frame*.1)*.2})`;g.lineWidth=1.5;
+    for(let x=rE;x<=rD;x+=12){
+      g.beginPath();g.moveTo(x,-espessura/2);g.lineTo(x,espessura/2);g.stroke();
+    }
+    g.strokeStyle='rgba(200,150,60,.8)';g.lineWidth=2;
+    g.beginPath();g.moveTo(rE,-espessura/2);g.lineTo(rD,-espessura/2);g.stroke();
+    g.beginPath();g.moveTo(rE, espessura/2);g.lineTo(rD, espessura/2);g.stroke();
   }
 
-  // Seta verde indicando o buraco (sempre visível)
+  // Boias flutuando NA superfície — pequenas e coloridas
+  g.fillStyle='#cc2200';
+  [rE, rE+redeW*0.25, rE+redeW*0.5, rE+redeW*0.75, rD].forEach(bx=>{
+    g.beginPath();g.arc(bx,-espessura/2,4,0,Math.PI*2);g.fill();
+    // Reflexo boia
+    g.fillStyle='rgba(255,100,80,.5)';
+    g.beginPath();g.arc(bx-1,-espessura/2-1,2,0,Math.PI*2);g.fill();
+    g.fillStyle='#cc2200';
+  });
+
+  // Linha superficial das boias (corda superior)
+  g.strokeStyle='rgba(160,100,30,.7)';g.lineWidth=1.5;g.setLineDash([4,3]);
+  g.beginPath();g.moveTo(rE,-espessura/2);g.lineTo(rD,-espessura/2);g.stroke();
+  g.setLineDash([]);
+
+  // Seta indicando o buraco — clara e visível
   const setaX=lado>0?cD-buraco/2:cE+buraco/2;
-  g.fillStyle='rgba(80,255,100,.9)';
-  g.font='bold 20px sans-serif';g.textAlign='center';g.textBaseline='middle';
+  g.save();
+  g.globalAlpha=0.9;
+  g.fillStyle='#2ecc71';
+  g.font='bold 18px sans-serif';g.textAlign='center';g.textBaseline='middle';
   g.fillText(lado>0?'→':'←', setaX, 0);
+  g.restore();
 
   g.restore();
 
@@ -1415,7 +1670,9 @@ function gameOver(){
   document.getElementById('hud').style.display='none';
   document.getElementById('bara-e').style.display='none';
   document.getElementById('bara-km').style.display='none';
-  addRk(null,pts,parseFloat(km.toFixed(1)));render();
+  addRk(null,pts,parseFloat(km.toFixed(1)));
+  salvarRankingGlobal(null,pts,parseFloat(km.toFixed(1)));
+  render();
 }
 
 // ── VITÓRIA ──
@@ -1475,7 +1732,23 @@ document.getElementById('bvmenu').addEventListener('click',()=>{
   document.getElementById('tvit').style.display='none';
   document.getElementById('ti').style.display='flex';renderRk();});
 
+let muted=false;
+function toggleMute(){
+  muted=!muted;
+  document.getElementById('btn-mute').textContent=muted?'🔇':'🔊';
+  if(gainRio) gainRio.gain.setTargetAtTime(muted?0:0.18,audioCtx.currentTime,0.3);
+}
+
 // ── BOOT ──
+function mostrarAba(aba){
+  document.getElementById('painel-local').style.display  = aba==='local'?'block':'none';
+  document.getElementById('painel-global').style.display = aba==='global'?'block':'none';
+  document.getElementById('aba-local').style.background  = aba==='local'?'#f0c030':'rgba(255,255,255,.08)';
+  document.getElementById('aba-local').style.color       = aba==='local'?'#0a1a08':'rgba(255,255,255,.6)';
+  document.getElementById('aba-global').style.background = aba==='global'?'#7bc87a':'rgba(255,255,255,.08)';
+  document.getElementById('aba-global').style.color      = aba==='global'?'#0a1a08':'rgba(255,255,255,.6)';
+  if(aba==='global') renderRkGlobal();
+}
 renderRk();inicRio();render();
 </script>
 </body>
