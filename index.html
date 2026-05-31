@@ -176,9 +176,10 @@ body::before{left:0}body::after{right:0}
   <div class="gop">Pontos: <span id="gpts">0</span></div>
   <div class="goi"><span id="gkm">0.0</span> km de 600 km</div>
   <div class="gom" id="gmsg"></div>
-  <input class="ginp" id="gnome" type="text" maxlength="16" placeholder="Seu nome (opcional)">
+  <p style="font-size:.72rem;color:rgba(255,255,255,.5);margin-bottom:3px">✏ Seu nome para o ranking global:</p>
+  <input class="ginp" id="gnome" type="text" maxlength="16" placeholder="Ex: Ernandes">
   <div class="gbtns">
-    <button class="btn" id="bsalv">Salvar e tentar de novo</button>
+    <button class="btn" id="bsalv" style="background:#f0c030;color:#0a1a08;border-color:#f0c030">💾 Salvar no ranking</button>
     <button class="btn r" id="bmenu">Menu</button>
   </div>
   <div class="gsci">O dourado migra até as cabeceiras do Rio Paraguai para desovar.<br>
@@ -1682,8 +1683,7 @@ function gameOver(){
   document.getElementById('bara-e').style.display='none';
   document.getElementById('bara-km').style.display='none';
   addRk(null,pts,parseFloat(km.toFixed(1)));
-  salvarRankingGlobal(null,pts,parseFloat(km.toFixed(1)));
-  render();
+  render(); // ranking global salvo ao clicar 'Salvar'
 }
 
 // ── VITÓRIA ──
@@ -1730,8 +1730,13 @@ function vitoria(){
 // ── UI ──
 document.getElementById('bini').addEventListener('click',iniciar);
 document.getElementById('bsalv').addEventListener('click',()=>{
-  addRk(document.getElementById('gnome').value.trim(),pts,parseFloat(km.toFixed(1)));
-  document.getElementById('gnome').value='';iniciar();});
+  const nomeSalvo = document.getElementById('gnome').value.trim() || 'Anônimo';
+  const kmSalvo = parseFloat(km.toFixed(1));
+  addRk(nomeSalvo, pts, kmSalvo);
+  salvarRankingGlobal(nomeSalvo, pts, kmSalvo);
+  document.getElementById('gnome').value='';
+  iniciar();
+});
 document.getElementById('bmenu').addEventListener('click',()=>{
   document.getElementById('tgo').style.display='none';
   document.getElementById('hud').style.display='none';
