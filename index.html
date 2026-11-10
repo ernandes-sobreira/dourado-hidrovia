@@ -607,8 +607,8 @@ function expandRio(ate){
     else if(yAbsKm<450) largMin = W*0.36; // Parque Nacional → estreita
     else if(yAbsKm<520) largMin = W*0.30; // Rio Jauru → mais estreito
     else                largMin = W*0.26; // → Cáceres: cabeceiras rasas
-    // Mínimo absoluto: canal sempre navegável (peixe r=16 + espaço)
-    const largFinal=Math.max(largMin, rioGen.larg, 68);
+    // Reserva espaço para o maior obstáculo (90 px), o peixe (32 px) e uma folga.
+    const largFinal=Math.max(largMin, rioGen.larg, Math.min(134,W-8));
     rio.push({cx:rioGen.cx,larg:largFinal});
   }
 }
@@ -632,11 +632,16 @@ const K={};
 document.addEventListener('keydown',e=>{K[e.key]=true;if(e.key.startsWith('Arrow'))e.preventDefault();});
 document.addEventListener('keyup',e=>{K[e.key]=false;});
 let tq=null,ms=null;
-cv.addEventListener('touchstart',e=>{tq={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});
-cv.addEventListener('touchmove',e=>{tq={x:e.touches[0].clientX,y:e.touches[0].clientY};e.preventDefault();},{passive:false});
+function pontoCanvas(evento){
+  const rect=cv.getBoundingClientRect();
+  return {x:(evento.clientX-rect.left)*W/rect.width,y:(evento.clientY-rect.top)*H/rect.height};
+}
+cv.addEventListener('touchstart',e=>{tq=pontoCanvas(e.touches[0]);},{passive:true});
+cv.addEventListener('touchmove',e=>{tq=pontoCanvas(e.touches[0]);e.preventDefault();},{passive:false});
 cv.addEventListener('touchend',()=>{tq=null;});
-cv.addEventListener('mousedown',e=>{ms={x:e.clientX,y:e.clientY};});
-cv.addEventListener('mousemove',e=>{if(ms)ms={x:e.clientX,y:e.clientY};});
+cv.addEventListener('touchcancel',()=>{tq=null;});
+cv.addEventListener('mousedown',e=>{ms=pontoCanvas(e);});
+cv.addEventListener('mousemove',e=>{if(ms)ms=pontoCanvas(e);});
 window.addEventListener('mouseup',()=>{ms=null;});
 
 function movePx(){
@@ -720,10 +725,10 @@ function poolObs(km){
   return     ['banco_longo','draga','tronco','banco_oval','draga','banco_longo','tronco'];   // → Cáceres: dragas + bancos
 }
 
-function geraObs(km){
+function geraObs(km,primeiro){
   if(emUC(km))return null;
   const pool=poolObs(km);
-  const id=pool[Math.floor(Math.random()*pool.length)];
+  const id=primeiro?'barcaca':km<45?'tronco':pool[Math.floor(Math.random()*pool.length)];
   const def=DOBS.find(d=>d.id===id);
   const yT=-def.alt/2-15;
   const s=segEm(yT2A(yT));
@@ -736,11 +741,9 @@ function geraObs(km){
     x=s.cx+lado*(s.larg/2-s.larg*(1-0.52)/2);
     return {...def,x,y:yT,rot:0,rotV:0,_lado:lado,_buraco:buraco,_canalLarg:s.larg,_canalCx:s.cx};
   }
-  const zona=Math.floor(Math.random()*3);
-  const spc=Math.max(0,s.larg/2-def.larg/2-6);
-  const off=zona===0?-spc*(0.4+Math.random()*0.5):zona===2?spc*(0.4+Math.random()*0.5):(Math.random()-0.5)*s.larg*0.22;
-  x=Math.max(s.cx-s.larg/2+def.larg/2+2,Math.min(s.cx+s.larg/2-def.larg/2-2,s.cx+off));
-  return {...def,x,y:yT,rot:0,rotV:(Math.random()-0.5)*0.02};
+  const lado=Math.random()<0.5?-1:1;
+  x=s.cx+lado*Math.max(0,(s.larg-def.larg)/2-2);
+  return {...def,x,y:yT,rot:0,rotV:(Math.random()-0.5)*0.02,_lado:lado};
 }
 
 // ── ALIMENTOS ──
@@ -800,12 +803,15 @@ function flash(txt,cor){flEl.textContent=txt;flEl.style.color=cor;flEl.style.opa
 
 // ── ESTADO ──
 let ativo=false,raf,frame=0,pts=0,km=0,energia=100,barcCount=0,causaGO='';
+const PASSO_MS=1000/60;
+let tempoAnterior=null,tempoAcumulado=0,proximoObstaculo=300;
 let pausaTaiama=false,pausaFrame=0,pausaAlims=[],pausaEntrou=false;
 
 // ── INICIAR ──
 function iniciar(){
   pts=0;km=0;energia=100;barcCount=0;frame=0;causaGO='';ativo=true;ultimoMarco=-1;
   obs=[];alims=[];parts=[];cardumes=[];
+  tempoAnterior=null;tempoAcumulado=0;proximoObstaculo=300;
   inicRio();resetPx();
   // Alimentos iniciais
   for(let i=0;i<6;i++){
@@ -817,16 +823,6 @@ function iniciar(){
     const x=Math.max(s.cx-s.larg/2+def.r+2,Math.min(s.cx+s.larg/2-def.r-2,s.cx+off));
     alims.push({...def,x,y:yT,p:Math.random()*Math.PI*2});
   }
-  // Obstáculos iniciais
-  ['barcaca','draga'].forEach((id,i)=>{
-    const def=DOBS.find(d=>d.id===id);
-    const yT=H*0.08+i*H*0.16;
-    const s=segEm(yT2A(yT));
-    const lado=i===0?-1:1;
-    const spc=Math.max(0,s.larg/2-def.larg/2-6);
-    const x=Math.max(s.cx-s.larg/2+def.larg/2+2,Math.min(s.cx+s.larg/2-def.larg/2-2,s.cx+lado*spc*0.65));
-    obs.push({...def,x,y:yT,rot:0,rotV:0});barcCount++;
-  });
   document.getElementById('hrec').textContent=melhor().toFixed(0)+'km';
   ['ti','tgo','tvit'].forEach(id=>document.getElementById(id).style.display='none');
   document.getElementById('hud').style.display='flex';
@@ -834,22 +830,30 @@ function iniciar(){
   document.getElementById('bara-km').style.display='block';
   document.getElementById('marco').style.display='none';
   notEl.classList.remove('on');
-  cancelAnimationFrame(raf);loop();
+  cancelAnimationFrame(raf);
+  raf=requestAnimationFrame(loop);
 }
 
-function loop(){
+function loop(agora){
   raf=requestAnimationFrame(loop);
-  if(pausaTaiama){ updatePausa(); renderPausa(); }
-  else{ update(); render(); }
+  if(tempoAnterior!==null) tempoAcumulado+=Math.min(agora-tempoAnterior,100);
+  tempoAnterior=agora;
+  while(tempoAcumulado+1e-8>=PASSO_MS){
+    tempoAcumulado-=PASSO_MS;
+    if(pausaTaiama) updatePausa();
+    else update();
+  }
+  if(pausaTaiama) renderPausa();
+  else render();
 }
 
 // ── UPDATE ──
 function update(){
   if(!ativo)return;
   frame++;
-  const vel=Math.min(6.5,2.5+km/META*3);
+  const vel=1.8+Math.min(1,km/META)*0.9;
   scrollY+=vel;
-  km+=vel*0.0333; // 600km em ~2min
+  km+=vel*0.05; // Distância do jogo, independente da velocidade visual
   expandRio(yT2A(-3000)+200);
 
   const uc=emUC(km);
@@ -876,8 +880,13 @@ function update(){
   pts+=Math.floor(vel*0.06);
 
   // Gerar obstáculos
-  const iO=uc?9999:Math.max(28,65-km/META*37);
-  if(frame%Math.floor(iO)===0){const o=geraObs(km);if(o){obs.push(o);barcCount++;}}
+  if(uc){
+    proximoObstaculo=frame+120;
+  } else if(frame>=proximoObstaculo){
+    const o=geraObs(km,barcCount===0);
+    if(o){obs.push(o);barcCount++;}
+    proximoObstaculo=frame+Math.round(180-Math.min(1,km/META)*60);
+  }
 
   // Gerar cardumes nas UCs
   if(uc && frame%90===0){ const c=geraCardume(); if(c) cardumes.push(c); }
@@ -889,16 +898,15 @@ function update(){
 
   // Atualizar obstáculos
   obs=obs.filter(o=>{
-    o.y+=vel+o.vel*vel*0.15;o.rot+=o.rotV||0;
+    o.y+=vel*(1+o.vel*0.025);o.rot+=o.rotV||0;
     if(o.y>H+200)return false;
     // Clamp ao canal (exceto rede)
     if(o.id!=='rede'){
       const s=segEm(yT2A(o.y));
-      const bE=s.cx-s.larg/2+o.larg/2+2,bD=s.cx+s.larg/2-o.larg/2-2;
-      if(bE<bD)o.x=Math.max(bE,Math.min(bD,o.x));else o.x=s.cx;
+      o.x=s.cx+o._lado*Math.max(0,(s.larg-o.larg)/2-2);
     }
     // Colisão
-    if(px.inv<=0){
+    if(ativo&&px.inv<=0){
       const dx=px.x-o.x,dy=px.y-o.y;
       let hit=false;
       if(o.id==='rede'){
@@ -978,7 +986,7 @@ function update(){
   document.getElementById('km-f').style.width=(km/META*100)+'%';
 
   if(energia<=0){causaGO='Morreu de exaustão — sem alimento.';gameOver();}
-  if(km>=META)vitoria();
+  if(ativo&&km>=META)vitoria();
 }
 
 // ── RENDER ──
