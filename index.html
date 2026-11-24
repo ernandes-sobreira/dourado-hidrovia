@@ -668,13 +668,13 @@ window.addEventListener('mouseup',()=>{ms=null;});
 
 function movePx(){
   let ax=0,ay=0;
-  if(K.ArrowLeft||K.a)ax-=0.72;if(K.ArrowRight||K.d)ax+=0.72;
-  if(K.ArrowUp||K.w)ay-=0.72;if(K.ArrowDown||K.s)ay+=0.72;
+  if(K.ArrowLeft||K.a)ax-=0.36;if(K.ArrowRight||K.d)ax+=0.36;
+  if(K.ArrowUp||K.w)ay-=0.36;if(K.ArrowDown||K.s)ay+=0.36;
   const alvo=tq||ms;
-  if(alvo){const dx=alvo.x-px.x,dy=alvo.y-px.y,d=Math.hypot(dx,dy);if(d>12){ax+=dx/d*0.9;ay+=dy/d*0.9;}}
+  if(alvo){const dx=alvo.x-px.x,dy=alvo.y-px.y,d=Math.hypot(dx,dy);if(d>12){ax+=dx/d*0.45;ay+=dy/d*0.45;}}
   px.vx=(px.vx+ax)*0.84;px.vy=(px.vy+ay)*0.84;
   const sp=Math.hypot(px.vx,px.vy);
-  if(sp>5.5){px.vx=px.vx/sp*5.5;px.vy=px.vy/sp*5.5;}
+  if(sp>2.75){px.vx=px.vx/sp*2.75;px.vy=px.vy/sp*2.75;} // peixe com metade da velocidade original
   px.x+=px.vx;px.y+=px.vy;
   if(Math.abs(px.vx)>0.3||Math.abs(px.vy)>0.3)px.ang=Math.atan2(px.vy,px.vx);
   // Clamp ao canal — permite entrar em baías laterais
@@ -873,9 +873,9 @@ function loop(agora){
 function update(){
   if(!ativo)return;
   frame++;
-  const vel=0.45+Math.min(1,km/META)*0.225; // um quarto da velocidade original
+  const vel=1.8+Math.min(1,km/META)*0.9;
   scrollY+=vel;
-  km+=vel*0.1; // Distância do jogo, independente da velocidade visual
+  km+=vel*0.05; // Distância do jogo, independente da velocidade visual
   expandRio(yT2A(-3000)+200);
 
   const uc=emUC(km);
@@ -903,20 +903,20 @@ function update(){
 
   // Gerar obstáculos
   if(uc){
-    proximoObstaculo=frame+480;
+    proximoObstaculo=frame+120;
   } else if(frame>=proximoObstaculo){
     const o=geraObs(km,barcCount===0);
     if(o){obs.push(o);barcCount++;}
-    proximoObstaculo=frame+Math.round(720-Math.min(1,km/META)*240);
+    proximoObstaculo=frame+Math.round(180-Math.min(1,km/META)*60);
   }
 
   // Gerar cardumes nas UCs
-  if(uc && frame%360===0){ const c=geraCardume(); if(c) cardumes.push(c); }
+  if(uc && frame%90===0){ const c=geraCardume(); if(c) cardumes.push(c); }
 
   // Gerar alimentos
-  const iA=uc?180:Math.max(520,880-km/META*280);
+  const iA=uc?45:Math.max(130,220-km/META*70);
   if(frame%Math.floor(iA)===0){const a=geraAlim(!!uc);if(a)alims.push(a);}
-  if(uc&&frame%100===0){const a=geraAlim(true);if(a)alims.push(a);}
+  if(uc&&frame%25===0){const a=geraAlim(true);if(a)alims.push(a);}
 
   // Atualizar obstáculos
   obs=obs.filter(o=>{
