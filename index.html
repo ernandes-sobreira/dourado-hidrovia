@@ -109,8 +109,27 @@ body::before{left:0}body::after{right:0}
 #tvit h2{font-size:clamp(1.8rem,6vw,3rem);font-weight:900;color:#f0c030;letter-spacing:2px;text-align:center}
 .vtxt{color:rgba(255,255,255,.72);font-size:.86rem;max-width:310px;line-height:1.75;text-align:center}
 .vsci{font-size:.62rem;color:rgba(255,255,255,.25);max-width:300px;font-style:italic;line-height:1.5;
-  border-top:1px solid rgba(255,255,255,.08);padding-top:8px;text-align:center}
+  border-top:1px solid #f2f2ea;padding-top:8px;text-align:center}
 #vcv{border-radius:8px;margin:4px 0}
+
+/* tema claro */
+body{background:#fff!important}
+body::before,body::after{background:#fff!important}
+#ti,#tgo,#tvit{background:#fff!important}
+#ti h1{text-shadow:none!important;color:#d4a000!important}
+.sub{color:#6b5a2a!important}.desc{color:#33402e!important}.desc b{color:#b07800!important}.desc i{color:#d0501a!important}
+.sci,.gsci,.vsci{color:#7a8a74!important}
+.rbox{background:#fffaf0!important;border-color:#f0c030!important}
+.rr{color:#33402e!important;border-bottom-color:#eee!important}.rpos{color:#2e7d32!important}.rpts{color:#b07800!important}
+.hc{background:rgba(255,255,255,.92)!important;border-color:#f0c030!important;color:#33402e!important}
+.hl{color:#2e7d32!important}.hv{color:#b07800!important}.hvs{color:#2e7d32!important}
+#marco,#notif,#pausa-txt{background:rgba(255,255,255,.96)!important;color:#33402e!important}
+#marco b,#notif b{color:#b07800!important}
+.goc,.goi{color:#5c6b58!important}.gom{color:#2e7d32!important}.vtxt{color:#33402e!important}
+.ginp{background:#fff!important;color:#33402e!important;border-color:#c5b26a!important}
+.ginp::placeholder{color:#9aa!important}
+#tvit h2{color:#b07800!important}
+#be-t,#km-t{background:rgba(0,0,0,.12)!important}
 </style>
 </head>
 <body>
@@ -118,16 +137,19 @@ body::before{left:0}body::after{right:0}
 
 <!-- INÍCIO -->
 <div id="ti">
+  <a href="https://ernandes-sobreira.github.io/jogos-ambientais/" style="position:absolute;top:14px;left:16px;color:#7a5a00;font-weight:700;text-decoration:none;font-size:.9rem">← Todos os jogos</a>
   <h1>DOURA<span>DO</span></h1>
-  <div class="sub">Corumbá → Cáceres · 600 km · Piracema</div>
+  <div class="sub">Corumbá → Cáceres · Piracema</div>
   <div class="linha"></div>
   <p class="desc">Você é um <b><i>Salminus brasiliensis</i></b>.<br>
   É outubro — época da piracema.<br>
-  Migre <b>600 km</b> contra a corrente.<br>
+  Suba o Rio Paraguai contra a corrente.<br>
+  No rio real são cerca de 670 km. No jogo, <b>600 km</b>.<br>
   <i>Desvie das barcaças. Coma. Desove.</i></p>
-  <p class="sci">Migração reprodutiva: oct–nov · Bacia Alto Paraguai<br>
+  <p class="sci">Migração reprodutiva: out–nov · Bacia Alto Paraguai<br>
   Wantzen et al. (2024) · Oliveira Junior et al. (2019)</p>
   <button class="btn" id="bini">▸ MIGRAR</button>
+  <p class="desc" style="font-size:.8rem;line-height:1.5">🎯 Meta: chegar a Cáceres. Rede, hélice, barcaça e draga matam. Tronco e banco de areia tiram energia e 50 pontos.</p>
   <div style="display:flex;gap:0;width:100%;max-width:320px">
     <button onclick="mostrarAba('local')" id="aba-local"
       style="flex:1;padding:7px 4px;border:none;border-radius:8px 0 0 0;cursor:pointer;
@@ -136,7 +158,7 @@ body::before{left:0}body::after{right:0}
     </button>
     <button onclick="mostrarAba('global')" id="aba-global"
       style="flex:1;padding:7px 4px;border:none;border-radius:0 8px 0 0;cursor:pointer;
-      background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);font-size:.68rem;font-weight:700;letter-spacing:1px">
+      background:#f2f2ea;color:#5c6b58;font-size:.68rem;font-weight:700;letter-spacing:1px">
       🌎 GLOBAL
     </button>
   </div>
@@ -680,12 +702,12 @@ function movePx(){
 // ── MARCOS GEOGRÁFICOS ──
 const MARCOS=[
   {km:0,  nome:'Porto de Corumbá',         desc:'Maior porto fluvial do Pantanal. Barcaças carregando soja e minério.'},
-  {km:20, nome:'Ladário',                  desc:'Base Naval. Efluentes industriais contaminam o rio.'},
-  {km:150,nome:'Rio Miranda',              desc:'Confluência com afluente pantaneiro. Área de pesca ilegal.'},
-  {km:280,nome:'🌿 Parque Nacional do Pantanal',desc:'Parque Nacional do Pantanal Matogrossense — 183.100 ha. Patrimônio Mundial UNESCO. ÁREA PROTEGIDA.',uc:true},
-  {km:370,nome:'🌿 ESEC Taiamã',               desc:'Estação Ecológica de Taiamã — 68.500 ha. Berçário de peixes. 131 espécies. ÁREA PROTEGIDA.',uc:true},
-  {km:520,nome:'Rio Jauru',                desc:'Afluente do Rio Paraguai próximo a Cáceres. Importante área de reprodução do dourado. (Oliveira Junior et al., 2019).'},
-  {km:600,nome:'🏆 Cáceres — Cabeceiras', desc:'Destino da migração. O dourado desova nas correntezas com cascalho.'},
+  {km:20, nome:'Ladário',                  desc:'Cidade vizinha a Corumbá, com base da Marinha e portos de minério.'},
+  {km:150,nome:'Serra do Amolar',          desc:'Morros à beira do Rio Paraguai, entre Corumbá e o Parque Nacional.'},
+  {km:280,nome:'🌿 Parque Nacional do Pantanal',desc:'Parque Nacional do Pantanal Matogrossense, na confluência dos rios Paraguai e Cuiabá. Cerca de 183 mil ha desde 2026. Patrimônio Mundial da UNESCO. ÁREA PROTEGIDA.',uc:true},
+  {km:370,nome:'🌿 ESEC Taiamã',               desc:'Estação Ecológica de Taiamã, ampliada em 2026 para cerca de 68,5 mil ha. Ilha entre os rios Paraguai e Bracinho. ÁREA PROTEGIDA.',uc:true},
+  {km:520,nome:'Rio Jauru',                desc:'Afluente do Rio Paraguai, cerca de 70 km rio abaixo de Cáceres.'},
+  {km:600,nome:'🏆 Cáceres', desc:'Fim da sua migração. Rio acima, o dourado desova no canal, e os ovos descem com a correnteza até as áreas alagadas.'},
 ];
 const ZONAS_UC=[{ini:270,fim:320,nome:'Parque Nacional'},{ini:355,fim:410,nome:'ESEC Taiamã'}];
 const META=600;
@@ -930,10 +952,10 @@ function update(){
       if(hit){
         if(o.fatal){causaGO=o.id==='rede'?'Capturado por rede ilegal.':o.id==='helice'?'Cortado pela hélice.':'Esmagado — '+o.lbl+'.';gameOver();return false;}
         // Tronco: perde energia
-        energia=Math.max(0,energia-o.dano);
+        energia=Math.max(0,energia-o.dano);pts=Math.max(0,pts-50);
         px.inv=55;
         const d=Math.hypot(dx,dy)||1;px.vx+=dx/d*5;px.vy+=dy/d*5;
-        notif(o.lbl,o.info,'d');flash('⚠ '+o.lbl,'#ff6060');
+        notif(o.lbl,o.info,'d');flash('⚠ '+o.lbl+' −50','#ff6060');
         for(let i=0;i<10;i++)parts.push(mkP(px.x,px.y,'#ff8844'));
         cv.style.filter='brightness(1.8)';setTimeout(()=>cv.style.filter='',100);
         if(energia<=0){causaGO='Morreu de exaustão.';gameOver();return false;}
@@ -1003,8 +1025,8 @@ function render(){
 
   // 1. TERRA — fundo verde cartunesco
   const gt=g.createLinearGradient(0,0,0,H);
-  gt.addColorStop(0,uc?'#0e3020':'#0a2010');
-  gt.addColorStop(1,uc?'#122818':'#0c2812');
+  gt.addColorStop(0,uc?'#cfe8b8':'#dcebc4');
+  gt.addColorStop(1,uc?'#bfe0a6':'#cfe3b2');
   g.fillStyle=gt;g.fillRect(0,0,W,H);
 
   // 2. ÁGUA — polígono do canal
@@ -1015,9 +1037,9 @@ function render(){
   for(let i=n-1;i>=0;i--)g.lineTo(pC[i].cx+pC[i].larg/2,pC[i].yT);
   g.closePath();
   const ga=g.createLinearGradient(0,0,W,H);
-  if(uc){ga.addColorStop(0,'#0d5a42');ga.addColorStop(.5,'#148060');ga.addColorStop(1,'#0a4a34');}
-  else if(km<80){ga.addColorStop(0,'#0a3a52');ga.addColorStop(.5,'#0f5070');ga.addColorStop(1,'#082840');}
-  else{ga.addColorStop(0,'#0c4a6e');ga.addColorStop(.5,'#1470a0');ga.addColorStop(1,'#0a3858');}
+  if(uc){ga.addColorStop(0,'#2a9d7a');ga.addColorStop(.5,'#35b08a');ga.addColorStop(1,'#26906f');}
+  else if(km<80){ga.addColorStop(0,'#3d7f9e');ga.addColorStop(.5,'#4a90b0');ga.addColorStop(1,'#35718f');}
+  else{ga.addColorStop(0,'#3a8bb8');ga.addColorStop(.5,'#4aa0cc');ga.addColorStop(1,'#337fa8');}
   g.fillStyle=ga;g.fill();
 
   // Ondas clip
@@ -1767,10 +1789,10 @@ function toggleMute(){
 function mostrarAba(aba){
   document.getElementById('painel-local').style.display  = aba==='local'?'block':'none';
   document.getElementById('painel-global').style.display = aba==='global'?'block':'none';
-  document.getElementById('aba-local').style.background  = aba==='local'?'#f0c030':'rgba(255,255,255,.08)';
-  document.getElementById('aba-local').style.color       = aba==='local'?'#0a1a08':'rgba(255,255,255,.6)';
-  document.getElementById('aba-global').style.background = aba==='global'?'#7bc87a':'rgba(255,255,255,.08)';
-  document.getElementById('aba-global').style.color      = aba==='global'?'#0a1a08':'rgba(255,255,255,.6)';
+  document.getElementById('aba-local').style.background  = aba==='local'?'#f0c030':'#f2f2ea';
+  document.getElementById('aba-local').style.color       = aba==='local'?'#0a1a08':'#5c6b58';
+  document.getElementById('aba-global').style.background = aba==='global'?'#7bc87a':'#f2f2ea';
+  document.getElementById('aba-global').style.color      = aba==='global'?'#0a1a08':'#5c6b58';
   if(aba==='global') renderRkGlobal();
 }
 renderRk();inicRio();render();
