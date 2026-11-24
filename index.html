@@ -873,9 +873,9 @@ function loop(agora){
 function update(){
   if(!ativo)return;
   frame++;
-  const vel=1.8+Math.min(1,km/META)*0.9;
+  const vel=0.9+Math.min(1,km/META)*0.45; // metade da velocidade original
   scrollY+=vel;
-  km+=vel*0.05; // Distância do jogo, independente da velocidade visual
+  km+=vel*0.1; // Distância do jogo, independente da velocidade visual
   expandRio(yT2A(-3000)+200);
 
   const uc=emUC(km);
@@ -903,20 +903,20 @@ function update(){
 
   // Gerar obstáculos
   if(uc){
-    proximoObstaculo=frame+120;
+    proximoObstaculo=frame+240;
   } else if(frame>=proximoObstaculo){
     const o=geraObs(km,barcCount===0);
     if(o){obs.push(o);barcCount++;}
-    proximoObstaculo=frame+Math.round(180-Math.min(1,km/META)*60);
+    proximoObstaculo=frame+Math.round(360-Math.min(1,km/META)*120);
   }
 
   // Gerar cardumes nas UCs
-  if(uc && frame%90===0){ const c=geraCardume(); if(c) cardumes.push(c); }
+  if(uc && frame%180===0){ const c=geraCardume(); if(c) cardumes.push(c); }
 
   // Gerar alimentos
-  const iA=uc?45:Math.max(130,220-km/META*70);
+  const iA=uc?90:Math.max(260,440-km/META*140);
   if(frame%Math.floor(iA)===0){const a=geraAlim(!!uc);if(a)alims.push(a);}
-  if(uc&&frame%25===0){const a=geraAlim(true);if(a)alims.push(a);}
+  if(uc&&frame%50===0){const a=geraAlim(true);if(a)alims.push(a);}
 
   // Atualizar obstáculos
   obs=obs.filter(o=>{
